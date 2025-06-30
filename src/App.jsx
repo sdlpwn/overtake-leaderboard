@@ -1,4 +1,4 @@
-import Leaderboard from './Leaderboard';
+import Leaderboard from './leaderboard';
 
 function App() {
   return <Leaderboard />;
