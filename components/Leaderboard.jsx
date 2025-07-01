@@ -4,24 +4,36 @@ import { useEffect, useState } from 'react';
 const API_7D = "https://hub.kaito.ai/api/v1/gateway/ai/kol/mindshare/top-leaderboard?duration=7d&topic_id=OVERTAKE&top_n=100&customized_community=customized&community_yaps=true";
 const API_30D = "https://hub.kaito.ai/api/v1/gateway/ai/kol/mindshare/top-leaderboard?duration=30d&topic_id=OVERTAKE&top_n=100&customized_community=customized&community_yaps=true";
 
-const sortOptions = [
-  { value: 'community_score', label: 'Score' },
-  { value: 'last_7_normalized_mention_score', label: 'Mentions' },
-  { value: 'smart_follower_count', label: 'Smart Followers' },
-  { value: 'last_7_day_avg_llm_insightfulness_score_scaled', label: 'LLM Insight' },
-  { value: 'last_7_day_avg_originality_score_scaled', label: 'Originality' },
-];
-
 const PAGE_SIZE = 20;
 
 export default function Leaderboard() {
   const [duration, setDuration] = useState('7d');
   const [data, setData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortKey, setSortKey] = useState('community_score');
+  const [sortKey, setSortKey] = useState('mindshare');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const sortOptions7d = [
+    { value: 'mindshare', label: 'Mindshare (%)' },
+    { value: 'community_score', label: 'Score' },
+    { value: 'last_7_normalized_mention_score', label: 'Mentions (7d)' },
+    { value: 'last_7_day_avg_llm_insightfulness_score_scaled', label: 'LLM Insight (7d)' },
+    { value: 'last_7_day_avg_originality_score_scaled', label: 'Originality (7d)' },
+    { value: 'smart_follower_count', label: 'Smart Followers' },
+  ];
+
+  const sortOptions30d = [
+    { value: 'mindshare', label: 'Mindshare (%)' },
+    { value: 'community_score', label: 'Score' },
+    { value: 'last_30_normalized_mention_score', label: 'Mentions (30d)' },
+    { value: 'last_30_day_avg_llm_insightfulness_score_scaled', label: 'LLM Insight (30d)' },
+    { value: 'last_30_day_avg_originality_score_scaled', label: 'Originality (30d)' },
+    { value: 'smart_follower_count', label: 'Smart Followers' },
+  ];
+
+  const sortOptions = duration === '7d' ? sortOptions7d : sortOptions30d;
 
   const fetchData = async () => {
     setLoading(true);
@@ -49,21 +61,23 @@ export default function Leaderboard() {
     setVisibleCount(PAGE_SIZE);
   }, [duration]);
 
-  const filteredData = data
-    .filter(item => {
-      const q = searchQuery.toLowerCase();
-      return (
-        item.name?.toLowerCase().includes(q) ||
-        item.username?.toLowerCase().includes(q)
-      );
-    })
-    .sort((a, b) => {
-      const aVal = Number(a[sortKey]) || 0;
-      const bVal = Number(b[sortKey]) || 0;
-      return bVal - aVal;
-    });
+  const filteredData = data.filter(item => {
+    const q = searchQuery.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(q) ||
+      item.username?.toLowerCase().includes(q)
+    );
+  });
 
-  const visibleData = filteredData.slice(0, visibleCount);
+  const sortedData = filteredData.sort((a, b) => {
+    const aVal = Number(a[sortKey]) || 0;
+    const bVal = Number(b[sortKey]) || 0;
+    return bVal - aVal;
+  });
+
+  const visibleData = sortedData.slice(0, visibleCount);
+
+  const is7d = duration === '7d';
 
   const getCardStyle = (idx) => {
     const base = 'p-4 rounded-xl shadow-md transition-transform duration-200 ease-in-out';
@@ -83,7 +97,7 @@ export default function Leaderboard() {
 
   return (
     <div className="max-w-5xl mx-auto mt-10 px-4 text-white">
-      <h1 className="text-3xl font-bold mb-4">🏁 OVERTAKE Yapping Leaderboard</h1>
+      <h1 className="text-3xl font-bold mb-4">🏁 OVERTAKE Yapping Leaderboard (Unofficial)</h1>
 
       <p className="text-sm text-gray-400 mb-4">
         Sorted by: <span className="text-[#0018FF] font-semibold">{getSortLabel(sortKey)}</span>
@@ -133,43 +147,52 @@ export default function Leaderboard() {
       )}
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
-        {visibleData.map((item, idx) => (
-          <div key={idx} className={getCardStyle(idx)}>
-            <div className="flex items-center gap-4">
-              <span className="text-xl font-bold w-6">{idx + 1}</span>
-              <img
-                src={item.icon}
-                alt={`${item.name} profile`}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              <div className="flex flex-col">
-                <a
-                  href={item.twitter_user_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold hover:text-[#0018FF]"
-                >
-                  {item.name}
-                </a>
-                <span className="text-sm text-gray-300">@{item.username}</span>
+        {visibleData.map((item) => {
+          const llm = is7d ? item.last_7_day_avg_llm_insightfulness_score_scaled : item.last_30_day_avg_llm_insightfulness_score_scaled;
+          const originality = is7d ? item.last_7_day_avg_originality_score_scaled : item.last_30_day_avg_originality_score_scaled;
+          const mentions = is7d ? item.last_7_normalized_mention_score : item.last_30_normalized_mention_score;
+          return (
+            <div key={item.user_id} className={getCardStyle(Number(item.rank) - 1)}>
+              <div className="flex items-center gap-4">
+                <span className="text-xl font-bold w-6">{item.rank}</span>
+                <img
+                  src={item.icon}
+                  alt={`${item.name} profile`}
+                  loading="lazy"
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                <div className="flex flex-col">
+                  <a
+                    href={item.twitter_user_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold hover:text-[#0018FF]"
+                  >
+                    {item.name}
+                  </a>
+                  <span className="text-sm text-gray-300">@{item.username}</span>
+                </div>
+                <div className={`ml-auto text-sm font-medium ${getScoreColor(item[sortKey])}`}>
+                  {sortKey === 'mindshare'
+                    ? `${(Number(item[sortKey]) * 100).toFixed(2)}%`
+                    : Number(item[sortKey])?.toFixed(2)}
+                </div>
               </div>
-              <div className={`ml-auto text-sm font-medium ${getScoreColor(item[sortKey])}`}>
-                {Number(item[sortKey])?.toFixed(2)}
-              </div>
-            </div>
 
-            <div className="mt-3 text-sm grid grid-cols-2 gap-2 text-gray-200">
-              <div>🧠 LLM Insight: {item.last_7_day_avg_llm_insightfulness_score_scaled}</div>
-              <div>✨ Originality: {item.last_7_day_avg_originality_score_scaled}</div>
-              <div>📣 Mentions: {item.last_7_normalized_mention_score}</div>
-              <div>🤖 Smart Followers: {item.smart_follower_count}</div>
-              <div>👥 Followers: {item.follower_count.toLocaleString()}</div>
+              <div className="mt-3 text-sm grid grid-cols-2 gap-2 text-gray-200">
+                <div>🧠 LLM Insight: {llm}</div>
+                <div>✨ Originality: {originality}</div>
+                <div>📣 Mentions: {mentions}</div>
+                <div>🤖 Smart Followers: {item.smart_follower_count}</div>
+                <div>👥 Followers: {item.follower_count?.toLocaleString()}</div>
+                <div>🔥 Mindshare: {(item.mindshare * 100).toFixed(2)}%</div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {visibleCount < filteredData.length && (
+      {visibleCount < sortedData.length && (
         <div className="text-center mt-6">
           <button
             onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
@@ -179,6 +202,10 @@ export default function Leaderboard() {
           </button>
         </div>
       )}
+
+      <footer className="text-center mt-12 text-gray-500 text-sm py-10">
+        Built by <a href="https://twitter.com/0xneoguri" className="text-[#0018FF] hover:underline" target="_blank" rel="noopener noreferrer">@0xneoguri</a>
+      </footer>
     </div>
   );
 }
