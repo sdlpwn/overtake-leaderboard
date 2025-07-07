@@ -1,9 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react';
 
-const API_7D = "https://hub.kaito.ai/api/v1/gateway/ai/kol/mindshare/top-leaderboard?duration=7d&topic_id=OVERTAKE&top_n=100&customized_community=customized&community_yaps=true";
-const API_30D = "https://hub.kaito.ai/api/v1/gateway/ai/kol/mindshare/top-leaderboard?duration=30d&topic_id=OVERTAKE&top_n=100&customized_community=customized&community_yaps=true";
-
 const PAGE_SIZE = 20;
 
 export default function Leaderboard() {
@@ -38,7 +35,7 @@ export default function Leaderboard() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    const url = duration === '7d' ? API_7D : API_30D;
+    const url = `/api/kaito?duration=${duration}`;
 
     try {
       const res = await fetch(url);
